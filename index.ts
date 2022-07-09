@@ -8,11 +8,11 @@ const jsonResponse = (data: any) => new Response(JSON.stringify(data), {
   }
 })
 
-router.get<{ foo: string, baz: string }>('/api/:foo/bar/:baz', ({ params }) => {
+router.get<'foo' | 'baz'>('/api/:foo/bar/:baz', ({ params }) => {
   return jsonResponse(params)
 })
 
-router.get<{ '*': string }>('/api/1/*', ({ params }) => {
+router.get<'*'>('/api/1/*', ({ params }) => {
   return jsonResponse(params)
 })
 

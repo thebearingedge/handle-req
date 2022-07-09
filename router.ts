@@ -1,24 +1,22 @@
-type PathParams = Record<string, string>
-
 type Next = () => Response | Promise<Response>
 
-type Context<P extends PathParams = PathParams> = {
+type Context<K extends string = string, P = { [key in K]: string }> = {
   req: Request
   params: P
   url: URL
   next: Next
 }
 
-type Handler<P extends PathParams = PathParams> = {
-  (ctx: Context<P>): Response | Promise<Response>
+type Handler<K extends string = string, P = { [key in K]: string }> = {
+  (ctx: Context<K, P>): Response | Promise<Response>
 }
 
-class Endpoint<P extends PathParams = PathParams> {
+class Endpoint<K extends string = string, P = { [key in K]: string }> {
 
   pattern: string[]
-  handlers: Handler<P>[]
+  handlers: Handler<K, P>[]
 
-  constructor(pattern: string[], handlers: Handler<P>[]) {
+  constructor(pattern: string[], handlers: Handler<K, P>[]) {
     this.pattern = pattern
     this.handlers = handlers
   }
@@ -86,10 +84,10 @@ export class Router {
   private _routes: Record<string, string> = Object.create(null)
   private _methods: Record<HTTPMethod, Segment> = Object.create(null)
 
-  private _when<P extends PathParams = PathParams>(
+  private _when<K extends string = string, P = { [key in K]: string }>(
     method: HTTPMethod,
     path: string,
-    handlers: Handler<P>[]
+    handlers: Handler<K, P>[]
   ): this {
     const pattern = path
       .split('/')
@@ -99,25 +97,25 @@ export class Router {
       throw new Error(`${method} route conflict: ${path} - ${this._routes[route]}`)
     }
     this._routes[route] = path
-    const endpoint = new Endpoint(pattern, handlers)
+    const endpoint = new Endpoint<K, P>(pattern, handlers)
     const root = this._methods[method] ??= new Segment(method)
-    root.append(pattern, endpoint as Endpoint<PathParams>)
+    root.append(pattern, endpoint as Endpoint<string, {}>)
     return this
   }
 
-  get = <P extends PathParams = PathParams>(path: string, ...handlers: Handler<P>[]) =>
+  get = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
     this._when('GET', path, handlers)
 
-  put = <P extends PathParams = PathParams>(path: string, ...handlers: Handler<P>[]) =>
+  put = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
     this._when('PUT', path, handlers)
 
-  post = <P extends PathParams = PathParams>(path: string, ...handlers: Handler<P>[]) =>
+  post = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
     this._when('POST', path, handlers)
 
-  patch = <P extends PathParams = PathParams>(path: string, ...handlers: Handler<P>[]) =>
+  patch = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
     this._when('PATCH', path, handlers)
 
-  delete = <P extends PathParams = PathParams>(path: string, ...handlers: Handler<P>[]) =>
+  delete = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
     this._when('DELETE', path, handlers)
 
   handle = async (req: Request): Promise<Response> => {
