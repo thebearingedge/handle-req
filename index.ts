@@ -37,7 +37,7 @@ const logReqUrl: Handler = ({ req, next }) => {
   return next()
 }
 
-const logReqTime: Handler = ({ req, next }) => {
+const logReqTime: Handler = ({ next }) => {
   console.log('received the request at', new Date().toUTCString())
   return next()
 }
@@ -59,56 +59,58 @@ async function test(): Promise<void> {
 
 type HTTPMethod = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
 
-enum Specificity {
-  Exact = 7,
-  Param = 6,
-  Splat = 0
-}
-
 class Segment {
 
   pattern: string
   endpoint?: Endpoint
-  specificity: Specificity
+  children: Segment[] = []
 
-  constructor(pattern: string, endpoint?: Endpoint) {
+  constructor(pattern: string) {
     this.pattern = pattern
-    this.endpoint = endpoint
-    this.specificity = pattern === '*'
-      ? Specificity.Splat
-      : pattern === ':'
-        ? Specificity.Param
-        : Specificity.Exact
   }
 
-  get isEndpoint() {
-    return this.endpoint != null
+  append([next, ...rest]: string[], endpoint: Endpoint): void {
+    if (next == null) {
+      this.endpoint = endpoint
+      return
+    }
+    const child = this.children.find(({ pattern }) => pattern === next)
+    if (child != null) {
+      child.append(rest, endpoint)
+      return
+    }
+    const segment = new Segment(next)
+    segment.append(rest, endpoint)
+    this.children.push(segment)
+    this.children.sort(({ pattern: a }, { pattern: b }) => a < b ? 1 : -1)
   }
-
-  append([next, ...rest]: string[], endpoint?: Endpoint): void {
-
-  }
-
 
 }
 
 class Router {
 
-  private readonly routes: Record<string, string> = Object.create(null)
-  private readonly methods: Record<HTTPMethod, Node> = Object.create(null)
+  routes: Record<string, string> = Object.create(null)
+  methods: Record<HTTPMethod, Segment> = Object.create(null)
 
-  get = this.when.bind(this, 'GET')
-  put = this.when.bind(this, 'PUT')
-  post = this.when.bind(this, 'POST')
-  patch = this.when.bind(this, 'PATCH')
-  delete = this.when.bind(this, 'DELETE')
+  get = this._when.bind(this, 'GET')
+  put = this._when.bind(this, 'PUT')
+  post = this._when.bind(this, 'POST')
+  patch = this._when.bind(this, 'PATCH')
+  delete = this._when.bind(this, 'DELETE')
 
-
-  when(method: HTTPMethod, path: string): this {
-    const patterns = [method, ...path.replace(/\\$/, '').split(/\\+/)].filter(Boolean)
-    const route = patterns.map(p => p[0] === ':' ? ':' : p).join('/')
+  private _when(method: HTTPMethod, path: string, endpoint: Endpoint): this {
+    const patterns = [method, ...path.split('/')].filter(Boolean)
+    const route = patterns.map(pattern => pattern[0] === ':' ? ':' : pattern).join('/')
+    if (this.routes[route] != null) {
+      throw new Error(`${method} route conflict: ${path} - ${this.routes[route]}`)
+    }
+    this.routes[route] = path
+    const [, ...rest] = patterns
+    const root = this.methods[method] ??= new Segment(method)
+    root.append(rest, endpoint)
     return this
   }
+
 }
 
 /**
