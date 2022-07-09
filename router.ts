@@ -1,38 +1,31 @@
 type Next = () => Response | Promise<Response>
 
-type Context<K extends string = string, P = { [key in K]: string }> = {
+type Context<Keys extends string = string, Params = { [K in Keys]: string }> = {
   req: Request
-  params: P
+  params: Params
   url: URL
   next: Next
 }
 
-type Handler<K extends string = string, P = { [key in K]: string }> = {
-  (ctx: Context<K, P>): Response | Promise<Response>
+type Handler<Keys extends string = string, Params = { [K in Keys]: string }> = {
+  (ctx: Context<Keys, Params>): Response | Promise<Response>
 }
 
-class Endpoint<K extends string = string, P = { [key in K]: string }> {
+class Endpoint<Keys extends string = string, Params = { [K in Keys]: string }> {
 
   pattern: string[]
-  handlers: Handler<K, P>[]
+  handlers: Handler<Keys, Params>[]
 
-  constructor(pattern: string[], handlers: Handler<K, P>[]) {
+  constructor(pattern: string[], handlers: Handler<Keys, Params>[]) {
     this.pattern = pattern
     this.handlers = handlers
   }
 
   async handle(req: Request, url: URL, route: string[]): Promise<Response> {
     const stack = [...this.handlers]
-    const matched = route.slice(0, this.pattern.length)
-    const params = this.pattern.reduce<P>((params, slug, index) => {
-      if (slug.charAt(0) !== ':' && slug !== '*') return params
-      const key = slug === '*'
-        ? slug
-        : slug.slice(1)
-      const value = slug === '*'
-        ? route.slice(matched.length - 1).join('/')
-        : route[index]
-      return Object.assign(params, { [key]: value })
+    const params = this.pattern.reduce<Params>((params, slug, index) => {
+      if (slug.charAt(0) !== ':') return params
+      return Object.assign(params, { [slug.slice(1)]: route[index] })
     }, Object.create(null))
     return (async function _next(depth: number): Promise<Response> {
       if (depth === stack.length) return new Response('', { status: 501 })
@@ -57,7 +50,7 @@ class Segment {
       this.endpoint = endpoint
       return
     }
-    const child = this.children.find(({ slug: pattern }) => pattern === next)
+    const child = this.children.find(({ slug }) => slug === next)
     if (child != null) {
       child.append(rest, endpoint)
       return
@@ -65,11 +58,10 @@ class Segment {
     const segment = new Segment(next)
     segment.append(rest, endpoint)
     this.children.push(segment)
-    this.children.sort(({ slug: a }, { slug: b }) => a > b ? 1 : -1)
+    this.children.sort(({ slug: a }, { slug: b }) => a < b ? 1 : -1)
   }
 
   match([curr, ...rest]: string[]): Segment | undefined {
-    if (this.slug === '*') return this
     if (this.slug !== curr && this.slug.charAt(0) !== ':') return
     if (rest.length === 0) return this
     return this.children.flatMap(segment => segment.match(rest)).filter(Boolean)[0]
@@ -84,10 +76,10 @@ export class Router {
   private _routes: Record<string, string> = Object.create(null)
   private _methods: Record<HTTPMethod, Segment> = Object.create(null)
 
-  private _when<K extends string = string, P = { [key in K]: string }>(
+  private _when<Keys extends string = string, Params = { [K in Keys]: string }>(
     method: HTTPMethod,
     path: string,
-    handlers: Handler<K, P>[]
+    handlers: Handler<Keys, Params>[]
   ): this {
     const pattern = path
       .split('/')
@@ -97,30 +89,35 @@ export class Router {
       throw new Error(`${method} route conflict: ${path} - ${this._routes[route]}`)
     }
     this._routes[route] = path
-    const endpoint = new Endpoint<K, P>(pattern, handlers)
+    const endpoint = new Endpoint<Keys, Params>(pattern, handlers)
     const root = this._methods[method] ??= new Segment(method)
     root.append(pattern, endpoint as Endpoint<string, {}>)
     return this
   }
 
-  get = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
-    this._when('GET', path, handlers)
+  get = <Keys extends string = string, Params = { [K in Keys]: string }>(
+    path: string, ...handlers: Handler<Keys, Params>[]
+  ) => this._when('GET', path, handlers)
 
-  put = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
-    this._when('PUT', path, handlers)
+  put = <Keys extends string = string, Params = { [K in Keys]: string }>(
+    path: string, ...handlers: Handler<Keys, Params>[]
+  ) => this._when('PUT', path, handlers)
 
-  post = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
-    this._when('POST', path, handlers)
+  post = <Keys extends string = string, Params = { [K in Keys]: string }>(
+    path: string, ...handlers: Handler<Keys, Params>[]
+  ) => this._when('POST', path, handlers)
 
-  patch = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
-    this._when('PATCH', path, handlers)
+  patch = <Keys extends string = string, Params = { [K in Keys]: string }>(
+    path: string, ...handlers: Handler<Keys, Params>[]
+  ) => this._when('PATCH', path, handlers)
 
-  delete = <K extends string = string, P = { [key in K]: string }>(path: string, ...handlers: Handler<K, P>[]) =>
-    this._when('DELETE', path, handlers)
+  delete = <Keys extends string = string, Params = { [K in Keys]: string }>(
+    path: string, ...handlers: Handler<Keys, Params>[]
+  ) => this._when('DELETE', path, handlers)
 
   handle = async (req: Request): Promise<Response> => {
-    const method = req.method as HTTPMethod
-    const root = this._methods[method]
+    const method = req.method
+    const root = this._methods[method as HTTPMethod]
     if (root == null) return new Response('', { status: 404 })
     const url = new URL(req.url)
     const route = url.pathname.split('/').filter(Boolean)
