@@ -1,10 +1,10 @@
-type Next = () => Response | Promise<Response>
+type NextHandler = () => Response | Promise<Response>
 
 type Context<Keys extends string = string, Params = { [K in Keys]: string }> = {
   req: Request
   params: Params
   url: URL
-  next: Next
+  next: NextHandler
 }
 
 type Handler<Keys extends string = string, Params = { [K in Keys]: string }> = {
@@ -28,8 +28,8 @@ class Endpoint<Keys extends string = string, Params = { [K in Keys]: string }> {
       return Object.assign(params, { [slug.slice(1)]: route[index] })
     }, Object.create(null))
     return (async function _next(depth: number): Promise<Response> {
-      if (depth === stack.length) return new Response('', { status: 501 })
-      return await stack[depth]({ req, url, params, next: () => _next(depth + 1) })
+      const res = await stack[depth]({ req, url, params, next: () => _next(depth + 1) })
+      return res ?? new Response('', { status: 501 })
     })(0)
   }
 
