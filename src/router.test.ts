@@ -58,13 +58,13 @@ describe('Router', () => {
     describe('no match', () => {
 
       it('returns a 404 response by default', async () => {
-        const res = await router.handle(get('/'))
+        const res = await router.fetch(get('/'))
         expect(res).to.have.property('status', 404)
       })
 
       it('returns a 404 response when no route is matched', async () => {
         router.get('/foo', ok)
-        const res = await router.handle(get('/bar'))
+        const res = await router.fetch(get('/bar'))
         expect(res).to.have.property('status', 404)
       })
 
@@ -75,7 +75,7 @@ describe('Router', () => {
       it('hits a static route', async () => {
         const res = await router
           .get('/foo', () => ok('a'))
-          .handle(get('/foo'))
+          .fetch(get('/foo'))
         expect(await res.text()).to.equal('a')
       })
 
@@ -83,14 +83,14 @@ describe('Router', () => {
         const res = await router
           .get('/foo', () => ok('a'))
           .get('/foo/bar', () => ok('b'))
-          .handle(get('/foo/bar'))
+          .fetch(get('/foo/bar'))
         expect(await res.text()).to.equal('b')
       })
 
       it('does not find routes for partial matches', async () => {
         const res = await router
           .get('/foo/bar/baz', ok)
-          .handle(get('/foo/bar'))
+          .fetch(get('/foo/bar'))
         expect(res).to.have.property('status', 404)
       })
 
@@ -101,7 +101,7 @@ describe('Router', () => {
       it('hits a dynamic route', async () => {
         const res = await router
           .get<{ any: string }>('/foo/:any', ({ params }) => ok(params.any))
-          .handle(get('/foo/qux'))
+          .fetch(get('/foo/qux'))
         expect(await res.text()).to.equal('qux')
       })
 
@@ -111,7 +111,7 @@ describe('Router', () => {
           .get('/foo/:bar/baz/:qux', ({ params }) => {
             return ok(`${params.bar}${params.qux}`)
           })
-          .handle(get('/foo/1/baz/2'))
+          .fetch(get('/foo/1/baz/2'))
         expect(await res.text()).to.equal('12')
       })
 
@@ -120,7 +120,7 @@ describe('Router', () => {
           .get('/foo/:bar/baz/:bar/qux/:bar', ({ params }) => {
             return ok(String(params.bar))
           })
-          .handle(get('/foo/1/baz/2/qux/3'))
+          .fetch(get('/foo/1/baz/2/qux/3'))
         expect(await res.text()).to.equal('1,2,3')
       })
 
@@ -128,7 +128,7 @@ describe('Router', () => {
         const res = await router
           .get('/foo/:bar', () => ok('2'))
           .get('/foo/:baz/qux', ({ params }) => ok(params.baz))
-          .handle(get('/foo/1/qux'))
+          .fetch(get('/foo/1/qux'))
         expect(await res.text()).to.equal('1')
       })
 
@@ -136,7 +136,7 @@ describe('Router', () => {
         const res = await router
           .get('/foo/:bar', () => ok('a'))
           .get('/foo/bar', () => ok('b'))
-          .handle(get('/foo/bar'))
+          .fetch(get('/foo/bar'))
         expect(await res.text()).to.equal('b')
       })
 
@@ -147,7 +147,7 @@ describe('Router', () => {
       it('hits a catch-all route', async () => {
         const res = await router
           .get('/foo/*', ({ params }) => ok(params['*']))
-          .handle(get('/foo/bar/baz'))
+          .fetch(get('/foo/bar/baz'))
         expect(await res.text()).to.equal('bar/baz')
       })
 
@@ -155,7 +155,7 @@ describe('Router', () => {
         const res = await router
           .get('/foo/*', () => ok('a'))
           .get('/foo/bar', () => ok('b'))
-          .handle(get('/foo/bar'))
+          .fetch(get('/foo/bar'))
         expect(await res.text()).to.equal('b')
       })
 
@@ -163,7 +163,7 @@ describe('Router', () => {
         const res = await router
           .get('/foo/*', () => ok('a'))
           .get('/foo/:bar', () => ok('b'))
-          .handle(get('/foo/bar'))
+          .fetch(get('/foo/bar'))
         expect(await res.text()).to.equal('b')
       })
 
@@ -171,7 +171,7 @@ describe('Router', () => {
         const res = await router
           .get('/foo/:bar/qux', () => ok('a'))
           .get('/foo/*', ({ params }) => ok(params['*']))
-          .handle(get('/foo/bar/baz'))
+          .fetch(get('/foo/bar/baz'))
         expect(await res.text()).to.equal('bar/baz')
       })
 
@@ -185,7 +185,7 @@ describe('Router', () => {
             ({ next }) => next(),
             () => ok('done')
           ])
-          .handle(get('/'))
+          .fetch(get('/'))
         expect(await res.text()).to.equal('done')
       })
 
@@ -193,7 +193,7 @@ describe('Router', () => {
         const res = await router
           // @ts-expect-error
           .get('/', () => {})
-          .handle(get('/'))
+          .fetch(get('/'))
         expect(res).to.have.property('status', 501)
       })
 
