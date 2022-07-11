@@ -82,15 +82,20 @@ class Segment {
 
 type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'PATCH' | 'DELETE' |  'OPTIONS'
 
+type RequestHandlers<P extends Params = Params> = Handler<P>[] | [Handler<P>[]]
+
+type Register<R extends Router = Router> =
+  <P extends Params = Params>(path: string, ...handlers: RequestHandlers<P>) => R
+
 export class Router {
 
   private _routes: Record<string, string> = Object.create(null)
   private _methods: Record<HTTPMethod, Segment> = Object.create(null)
 
-  private _when<P extends Params = Params>(
+  private _on<P extends Params = Params>(
     method: HTTPMethod,
     path: string,
-    handlers: Handler<P>[]
+    ...handlers: RequestHandlers<P>
   ): this {
     const pathArray = path.split('/').filter(Boolean)
     const pathPattern = pathArray.map(slug => slug.startsWith(':') ? ':' : slug)
@@ -104,32 +109,19 @@ export class Router {
       if (slug.startsWith(':')) keys[index] = slug.slice(1)
       return keys
     }, Object.create(null))
-    const endpoint = new Endpoint(paramKeys, handlers)
+    const endpoint = new Endpoint(paramKeys, handlers.flat())
     const root = this._methods[method] ??= new Segment(method)
     root.append(pathPattern, endpoint as Endpoint<{}>)
     return this
   }
 
-  get = <P extends Params = Params>(path: string, ...handlers: Handler<P>[] | [Handler<P>[]]) =>
-    this._when('GET', path, handlers.flat())
-
-  put = <P extends Params = Params>(path: string, ...handlers: Handler<P>[] | [Handler<P>[]]) =>
-    this._when('PUT', path, handlers.flat())
-
-  post = <P extends Params = Params>(path: string, ...handlers: Handler<P>[] | [Handler<P>[]]) =>
-    this._when('POST', path, handlers.flat())
-
-  head = <P extends Params = Params>(path: string, ...handlers: Handler<P>[] | [Handler<P>[]]) =>
-    this._when('HEAD', path, handlers.flat())
-
-  patch = <P extends Params = Params>(path: string, ...handlers: Handler<P>[] | [Handler<P>[]]) =>
-    this._when('PATCH', path, handlers.flat())
-
-  delete = <P extends Params = Params>(path: string, ...handlers: Handler<P>[] | [Handler<P>[]]) =>
-    this._when('DELETE', path, handlers.flat())
-
-  options = <P extends Params = Params>(path: string, ...handlers: Handler<P>[] | [Handler<P>[]]) =>
-    this._when('OPTIONS', path, handlers.flat())
+  get = this._on.bind(this, 'GET') as Register<typeof this>
+  put = this._on.bind(this, 'PUT') as Register<typeof this>
+  post = this._on.bind(this, 'POST') as Register<typeof this>
+  head = this._on.bind(this, 'HEAD') as Register<typeof this>
+  patch = this._on.bind(this, 'PATCH') as Register<typeof this>
+  delete = this._on.bind(this, 'DELETE') as Register<typeof this>
+  options = this._on.bind(this, 'OPTIONS') as Register<typeof this>
 
   async handle(req: Request): Promise<Response> {
     const root = this._methods[req.method as HTTPMethod]

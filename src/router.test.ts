@@ -100,7 +100,7 @@ describe('Router', () => {
 
       it('hits a dynamic route', async () => {
         const res = await router
-          .get('/foo/:any', ({ params }: { params: { any: string } }) => ok(params.any))
+          .get<{ any: string }>('/foo/:any', ({ params }) => ok(params.any))
           .handle(get('/foo/qux'))
         expect(await res.text()).to.equal('qux')
       })
@@ -170,9 +170,9 @@ describe('Router', () => {
       it('hits a catch-all route after exhausting static and dynamic routes', async () => {
         const res = await router
           .get('/foo/:bar/qux', () => ok('a'))
-          .get('/foo/*', () => ok('b'))
+          .get('/foo/*', ({ params }) => ok(params['*']))
           .handle(get('/foo/bar/baz'))
-        expect(await res.text()).to.equal('b')
+        expect(await res.text()).to.equal('bar/baz')
       })
 
     })
