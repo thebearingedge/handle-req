@@ -97,21 +97,21 @@ export class Router {
     path: string,
     ...handlers: RequestHandlers<P>
   ): this {
-    const pathArray = path.split('/').filter(Boolean)
-    const pathPattern = pathArray.map(slug => slug.startsWith(':') ? ':' : slug)
-    const route = [method, ...pathPattern].join('/')
+    const slugs = path.split('/').filter(Boolean)
+    const pattern = slugs.map(slug => slug.startsWith(':') ? ':' : slug)
+    const route = [method, ...pattern].join('/')
     if (this._routes[route] != null) {
       throw new Error(`${method} route conflict: ${path} - ${this._routes[route]}`)
     }
     this._routes[route] = path
-    const paramKeys = pathArray.reduce((keys, slug, index) => {
+    const keys = slugs.reduce((keys, slug, index) => {
       if (slug === '*') keys[index] = slug
       if (slug.startsWith(':')) keys[index] = slug.slice(1)
       return keys
     }, Object.create(null))
-    const endpoint = new Endpoint(paramKeys, handlers.flat())
+    const endpoint = new Endpoint(keys, handlers.flat())
     const root = this._methods[method] ??= new Segment(method)
-    root.append(pathPattern, endpoint as Endpoint)
+    root.append(pattern, endpoint as Endpoint)
     return this
   }
 
