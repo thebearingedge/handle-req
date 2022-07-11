@@ -18,21 +18,21 @@ class Endpoint<P extends Params = Params> {
   constructor(private keys: ParamKeys, private handlers: Handler<P>[]) {}
 
   async handle(req: Request, url: URL, route: string[]): Promise<Response> {
-    const params = Object.keys(this.keys).map(Number).reduce((params, position) => {
-      const key = this.keys[position]
+    const params = Object.keys(this.keys).map(Number).reduce((params, depth) => {
+      const key = this.keys[depth]
       if (key === '*') {
-        params[key] = route.slice(position).join('/')
+        params[key] = route.slice(depth).join('/')
         return params
       }
       if (key in params) {
         if (Array.isArray(params[key])) {
-          params[key].push(route[position])
+          params[key].push(route[depth])
           return params
         } else {
-          params[key] = [params[key], route[position]]
+          params[key] = [params[key], route[depth]]
         }
       } else {
-        params[key] = route[position]
+        params[key] = route[depth]
       }
       return params
     }, Object.create(null))
@@ -45,37 +45,31 @@ class Endpoint<P extends Params = Params> {
 
 }
 
-class Segment {
+class Slug {
 
-  slug: string
+  token: string
   endpoint?: Endpoint
-  children: Segment[] = []
+  children: Slug[] = []
 
-  constructor(slug: string) {
-    this.slug = slug
+  constructor(token: string) {
+    this.token = token
   }
 
   append([next, ...rest]: string[], endpoint: Endpoint): void {
-    if (next == null) {
-      this.endpoint = endpoint
-      return
-    }
-    const child = this.children.find(({ slug }) => slug === next)
-    if (child != null) {
-      child.append(rest, endpoint)
-      return
-    }
-    const segment = new Segment(next)
+    if (next == null) return void (this.endpoint = endpoint)
+    const child = this.children.find(({ token }) => token === next)
+    if (child != null) return child.append(rest, endpoint)
+    const segment = new Slug(next)
     segment.append(rest, endpoint)
     this.children.push(segment)
-    this.children.sort(({ slug: a }, { slug: b }) => a < b ? 1 : -1)
+    this.children.sort(({ token: a }, { token: b }) => a < b ? 1 : -1)
   }
 
-  match(position: number, route: string[]): Segment | undefined {
-    if (this.slug === '*') return this
-    if (this.slug !== route[position] && this.slug.charAt(0) !== ':') return
-    if (position === route.length - 1) return this
-    return this.children.flatMap(child => child.match(position + 1, route)).filter(Boolean)[0]
+  match(depth: number, route: string[]): Slug | undefined {
+    if (this.token === '*') return this
+    if (this.token !== route[depth] && this.token.charAt(0) !== ':') return
+    if (depth === route.length - 1) return this
+    return this.children.flatMap(child => child.match(depth + 1, route)).filter(Boolean)[0]
   }
 
 }
@@ -90,28 +84,28 @@ type Route<R extends Router = Router> =
 export class Router {
 
   private _routes: Record<string, string> = Object.create(null)
-  private _methods: Record<HTTPMethod, Segment> = Object.create(null)
+  private _methods: Record<HTTPMethod, Slug> = Object.create(null)
 
   private _on<P extends Params = Params>(
     method: HTTPMethod,
     path: string,
     ...handlers: RequestHandlers<P>
   ): this {
-    const slugs = path.split('/').filter(Boolean)
-    const pattern = slugs.map(slug => slug.startsWith(':') ? ':' : slug)
-    const route = [method, ...pattern].join('/')
+    const pattern = path.split('/').filter(Boolean)
+    const tokens = pattern.map(slug => slug.startsWith(':') ? ':' : slug)
+    const route = [method, ...tokens].join('/')
     if (this._routes[route] != null) {
       throw new Error(`${method} route conflict: ${path} - ${this._routes[route]}`)
     }
     this._routes[route] = path
-    const keys = slugs.reduce((keys, slug, index) => {
+    const keys = pattern.reduce((keys, slug, index) => {
       if (slug === '*') keys[index] = slug
       if (slug.startsWith(':')) keys[index] = slug.slice(1)
       return keys
     }, Object.create(null))
     const endpoint = new Endpoint(keys, handlers.flat())
-    const root = this._methods[method] ??= new Segment(method)
-    root.append(pattern, endpoint as Endpoint)
+    const root = this._methods[method] ??= new Slug(method)
+    root.append(tokens, endpoint as Endpoint)
     return this
   }
 
