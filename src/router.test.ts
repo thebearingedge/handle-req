@@ -87,10 +87,19 @@ describe('Router', () => {
       const res = await router
         .get('/foo/bar/baz/qux', ok)
         .get('/foo/:bar/baz/:qux', ({ params }) => {
-          return ok(params.bar + params.qux)
+          return ok(`${params.bar}${params.qux}`)
         })
         .handle(get('/foo/1/baz/2'))
       expect(await res.text()).to.equal('12')
+    })
+
+    it('collects multiple params of same key into an array', async () => {
+      const res = await router
+        .get('/foo/:bar/baz/:bar/qux/:bar', ({ params }) => {
+          return ok(String(params.bar))
+        })
+        .handle(get('/foo/1/baz/2/qux/3'))
+      expect(await res.text()).to.equal('1,2,3')
     })
 
     it('hits a longer dynamic route', async () => {
