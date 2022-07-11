@@ -20,6 +20,10 @@ class Endpoint<P extends Params = Params> {
   async handle(req: Request, url: URL, route: string[]): Promise<Response> {
     const params = Object.keys(this.keys).map(Number).reduce((params, position) => {
       const key = this.keys[position]
+      if (key === '*') {
+        params[key] = route.slice(position).join('/')
+        return params
+      }
       if (key in params) {
         if (Array.isArray(params[key])) {
           params[key].push(route[position])
@@ -68,6 +72,7 @@ class Segment {
   }
 
   match(position: number, route: string[]): Segment | undefined {
+    if (this.slug === '*') return this
     if (this.slug !== route[position] && this.slug.charAt(0) !== ':') return
     if (position === route.length - 1) return this
     return this.children.flatMap(child => child.match(position + 1, route)).filter(Boolean)[0]
@@ -75,7 +80,7 @@ class Segment {
 
 }
 
-type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'DELETE' | 'PATCH' | 'OPTIONS'
+type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'PATCH' | 'DELETE' |  'OPTIONS'
 
 export class Router {
 
@@ -95,6 +100,7 @@ export class Router {
     }
     this._routes[route] = path
     const paramKeys = pathArray.reduce((keys, slug, index) => {
+      if (slug === '*') keys[index] = slug
       if (slug.startsWith(':')) keys[index] = slug.slice(1)
       return keys
     }, Object.create(null))
