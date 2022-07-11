@@ -39,8 +39,10 @@ describe('Router', () => {
       expect(() => {
         router.get('/api/:foo', ok)
         router.put('/api/:foo', ok)
+        router.head('/api/:foo', ok)
         router.patch('/api/:foo', ok)
         router.delete('/api/:foo', ok)
+        router.options('/api/:foo', ok)
       }).not.to.throw()
     })
 
