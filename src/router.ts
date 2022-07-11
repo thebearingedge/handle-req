@@ -74,12 +74,16 @@ class Slug {
 
 }
 
-type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'PATCH' | 'DELETE' |  'OPTIONS'
+type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
-type RequestHandlers<P extends Params = Params> = Handler<P>[] | [Handler<P>[]]
+type RequestHandlers<P extends Params = Params> =
+  | [Handler<P>, ...Handler<P>[]]
+  | [[Handler<P>, ...Handler<P>[]]]
 
 type Route<R extends Router = Router> =
   <P extends Params = Params>(path: string, ...handlers: RequestHandlers<P>) => R
+
+const IS_VALID_PATH = /^\/((?::?[\w\d.-]+)(?:\/:?[\w\d_.-]+)*(?:\/\*)?\/?)?$/
 
 export class Router {
 
@@ -91,6 +95,11 @@ export class Router {
     path: string,
     ...handlers: RequestHandlers<P>
   ): this {
+    if (!IS_VALID_PATH.test(path)) {
+      throw new Error (
+        `invalid route ${path} - may only contain /static, /:dynamic, and end with catch-all /*`
+      )
+    }
     const pattern = path.split('/').filter(Boolean)
     const tokens = pattern.map(slug => slug.startsWith(':') ? ':' : slug)
     const route = [method, ...tokens].join('/')

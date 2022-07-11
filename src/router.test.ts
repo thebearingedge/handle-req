@@ -33,10 +33,10 @@ describe('Router', () => {
     })
 
     it('throws on duplicate catch-all routes', () => {
-      router.get('/api/*/foo')
+      router.get('/api/foo/*', ok)
       expect(() => {
-        router.get('/api/*/foo')
-      }).to.throw(Error, 'GET route conflict: /api/*/foo - /api/*/foo')
+        router.get('/api/foo/*', ok)
+      }).to.throw(Error, 'GET route conflict: /api/foo/* - /api/foo/*')
     })
 
     it('does not throw on duplicate routes for different methods', () => {
@@ -143,6 +143,12 @@ describe('Router', () => {
     })
 
     describe('catch-all routes', () => {
+
+      it('only allows catch-all at the end of path', () => {
+        expect(() => {
+          router.get('/foo/*/bar', ok)
+        }).to.throw(Error, 'invalid route /foo/*/bar')
+      })
 
       it('hits a catch-all route', async () => {
         const res = await router
