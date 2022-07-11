@@ -84,7 +84,7 @@ type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'PATCH' | 'DELETE' |  'OPTIO
 
 type RequestHandlers<P extends Params = Params> = Handler<P>[] | [Handler<P>[]]
 
-type Register<R extends Router = Router> =
+type Route<R extends Router = Router> =
   <P extends Params = Params>(path: string, ...handlers: RequestHandlers<P>) => R
 
 export class Router {
@@ -111,17 +111,17 @@ export class Router {
     }, Object.create(null))
     const endpoint = new Endpoint(paramKeys, handlers.flat())
     const root = this._methods[method] ??= new Segment(method)
-    root.append(pathPattern, endpoint as Endpoint<{}>)
+    root.append(pathPattern, endpoint as Endpoint)
     return this
   }
 
-  get = this._on.bind(this, 'GET') as Register<typeof this>
-  put = this._on.bind(this, 'PUT') as Register<typeof this>
-  post = this._on.bind(this, 'POST') as Register<typeof this>
-  head = this._on.bind(this, 'HEAD') as Register<typeof this>
-  patch = this._on.bind(this, 'PATCH') as Register<typeof this>
-  delete = this._on.bind(this, 'DELETE') as Register<typeof this>
-  options = this._on.bind(this, 'OPTIONS') as Register<typeof this>
+  get: Route<typeof this> = (path, ...handlers) => this._on('GET', path, ...handlers)
+  put: Route<typeof this> = (path, ...handlers) => this._on('PUT', path, ...handlers)
+  post: Route<typeof this> = (path, ...handlers) => this._on('POST', path, ...handlers)
+  head: Route<typeof this> = (path, ...handlers) => this._on('HEAD', path, ...handlers)
+  patch: Route<typeof this> = (path, ...handlers) => this._on('PATCH', path, ...handlers)
+  delete: Route<typeof this> = (path, ...handlers) => this._on('DELETE', path, ...handlers)
+  options: Route<typeof this> = (path, ...handlers) => this._on('OPTIONS', path, ...handlers)
 
   async handle(req: Request): Promise<Response> {
     const root = this._methods[req.method as HTTPMethod]
