@@ -47,37 +47,38 @@ class Endpoint<P extends Params = Params> {
 
 class Slug {
 
-  endpoint?: Endpoint
-  dynamicChild?: Slug
-  catchAllChild?: Slug
-  staticChildren: Slug[] = []
+  private endpoint?: Endpoint
+  private dynamicChild?: Slug
+  private catchAllChild?: Slug
+  private staticChildren: Slug[] = []
 
   constructor(private token: string) {}
 
-  append([next, ...rest]: string[], endpoint: Endpoint): void {
-    if (next == null) return void (this.endpoint = endpoint)
-    if (next === ':') {
-      this.dynamicChild ??= new Slug(next)
-      this.dynamicChild.append(rest, endpoint)
-    } else if (next === '*') {
-      this.catchAllChild ??= new Slug(next)
-      this.catchAllChild.append(rest, endpoint)
+  append(depth: number, tokens: string[], endpoint: Endpoint): void {
+    const token = tokens[depth]
+    if (token == null) return void (this.endpoint = endpoint)
+    if (token === ':') {
+      this.dynamicChild ??= new Slug(token)
+      this.dynamicChild.append(depth + 1, tokens, endpoint)
+    } else if (token === '*') {
+      this.catchAllChild ??= new Slug(token)
+      this.catchAllChild.append(depth + 1, tokens, endpoint)
     } else {
-      const staticChild = this.staticChildren.find(({ token }) => token === next)
-      if (staticChild != null) return staticChild.append(rest, endpoint)
-      const newChild = new Slug(next)
-      newChild.append(rest, endpoint)
+      const child = this.staticChildren.find(child => token === child.token)
+      if (child != null) return child.append(depth + 1, tokens, endpoint)
+      const newChild = new Slug(token)
+      newChild.append(depth + 1, tokens, endpoint)
       this.staticChildren.push(newChild)
     }
   }
 
   match(depth: number, route: string[]): Endpoint | undefined {
     if (this.token !== route[depth] && this.token !== ':') return
-    if (depth === route.length - 1) return this.endpoint
-    const [staticEndpoint] = this.staticChildren
-      .flatMap(staticChild => staticChild.match(depth + 1, route))
+    if (depth + 1 === route.length) return this.endpoint
+    const [matched] = this.staticChildren
+      .flatMap(child => child.match(depth + 1, route))
       .filter(Boolean)
-    return staticEndpoint ??
+    return matched ??
            this.dynamicChild?.match(depth + 1, route) ??
            this.catchAllChild?.endpoint
   }
@@ -97,8 +98,8 @@ const IS_VALID_PATH = /^\/((?::?[\w\d.-]+)(?:\/:?[\w\d_.-]+)*(?:\/\*)?\/?)?$/
 
 export class Router {
 
-  private _routes: Record<string, string> = Object.create(null)
-  private _methods: Record<HTTPMethod, Slug> = Object.create(null)
+  private routes: Record<string, string> = Object.create(null)
+  private methods: Record<HTTPMethod, Slug> = Object.create(null)
 
   private _on<P extends Params = Params>(
     method: HTTPMethod,
@@ -113,18 +114,18 @@ export class Router {
     const pattern = path.split('/').filter(Boolean)
     const tokens = pattern.map(slug => slug.startsWith(':') ? ':' : slug)
     const route = [method, ...tokens].join('/')
-    if (this._routes[route] != null) {
-      throw new Error(`${method} route conflict: ${path} - ${this._routes[route]}`)
+    if (this.routes[route] != null) {
+      throw new Error(`${method} route conflict: ${path} - ${this.routes[route]}`)
     }
-    this._routes[route] = path
+    this.routes[route] = path
     const keys = pattern.reduce((keys, slug, index) => {
       if (slug === '*') keys[index] = slug
       if (slug.startsWith(':')) keys[index] = slug.slice(1)
       return keys
     }, Object.create(null))
     const endpoint = new Endpoint(keys, handlers.flat())
-    const root = this._methods[method] ??= new Slug(method)
-    root.append(tokens, endpoint as Endpoint)
+    const root = this.methods[method] ??= new Slug(method)
+    root.append(0, tokens, endpoint as Endpoint)
     return this
   }
 
@@ -137,7 +138,7 @@ export class Router {
   options: Route<typeof this> = (path, ...handlers) => this._on('OPTIONS', path, ...handlers)
 
   fetch = async (req: Request): Promise<Response> => {
-    const root = this._methods[req.method as HTTPMethod]
+    const root = this.methods[req.method as HTTPMethod]
     if (root == null) return new Response('', { status: 404 })
     const url = new URL(req.url)
     const route = url.pathname.split('/').filter(Boolean)
