@@ -48,7 +48,7 @@ describe('Router', () => {
 
   })
 
-  describe('handle(req: Request)', () => {
+  describe('fetch(req: Request)', () => {
 
     describe('no match', () => {
 

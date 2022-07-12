@@ -107,7 +107,7 @@ export class Router {
     ...handlers: RequestHandlers<P>
   ): this {
     if (!IS_VALID_PATH.test(path)) {
-      throw new Error (
+      throw new Error(
         `invalid route ${path} - may only contain /static, /:dynamic, and end with catch-all /*`
       )
     }
