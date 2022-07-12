@@ -126,7 +126,7 @@ export class Router {
   delete: Route<typeof this> = (path, ...handlers) => this._on('DELETE', path, ...handlers)
   options: Route<typeof this> = (path, ...handlers) => this._on('OPTIONS', path, ...handlers)
 
-  async fetch(req: Request): Promise<Response> {
+  fetch = async (req: Request): Promise<Response> => {
     const root = this._methods[req.method as HTTPMethod]
     if (root == null) return new Response('', { status: 404 })
     const url = new URL(req.url)
