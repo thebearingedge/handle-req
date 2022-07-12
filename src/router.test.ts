@@ -27,11 +27,6 @@ describe('Router', () => {
       }).to.throw(Error, 'GET route conflict: /api/:bar/baz - /api/:foo/baz')
     })
 
-    it('does not throw on partial duplicate dynamic routes', () => {
-      router.get('/api/:foo', ok)
-      expect(() => router.get('/api/:bar/baz', ok)).not.to.throw()
-    })
-
     it('throws on duplicate catch-all routes', () => {
       router.get('/api/foo/*', ok)
       expect(() => {
@@ -40,14 +35,14 @@ describe('Router', () => {
     })
 
     it('does not throw on duplicate routes for different methods', () => {
-      router.post('/api/:foo', ok)
+      router.post('/api/:foo/*', ok)
       expect(() => {
-        router.get('/api/:foo', ok)
-        router.put('/api/:foo', ok)
-        router.head('/api/:foo', ok)
-        router.patch('/api/:foo', ok)
-        router.delete('/api/:foo', ok)
-        router.options('/api/:foo', ok)
+        router.get('/api/:foo/*', ok)
+        router.put('/api/:foo/*', ok)
+        router.head('/api/:foo/*', ok)
+        router.patch('/api/:foo/*', ok)
+        router.delete('/api/:foo/*', ok)
+        router.options('/api/:foo/*', ok)
       }).not.to.throw()
     })
 
@@ -96,7 +91,7 @@ describe('Router', () => {
 
     })
 
-    describe('dynamic match', () => {
+    describe('dynamic routes', () => {
 
       it('hits a dynamic route', async () => {
         const res = await router
@@ -185,7 +180,7 @@ describe('Router', () => {
 
     describe('handler stacks', () => {
 
-      it('processes a handler stack', async () => {
+      it('runs handler stack', async () => {
         const res = await router
           .get('/', [
             ({ next }) => next(),
