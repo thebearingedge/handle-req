@@ -62,7 +62,7 @@ class Slug {
     const segment = new Slug(next)
     segment.append(rest, endpoint)
     this.children.push(segment)
-    this.children.sort(({ token: a }, { token: b }) => a < b ? 1 : -1)
+    this.children.sort(({ token: a }, { token: b }) => a < b ? 1 : -1) // 'a' > ':' > '*'
   }
 
   match(depth: number, route: string[]): Slug | undefined {
