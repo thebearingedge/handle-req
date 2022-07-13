@@ -1,5 +1,3 @@
-import * as util from 'util'
-
 type NextHandler = () => Response | Promise<Response>
 
 type ParamKeys = Record<string, string>
