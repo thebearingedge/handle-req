@@ -124,9 +124,7 @@ export class Router {
 
     while (stack.length !== 0) {
       const [node, depth] = stack.pop() as [Node, number]
-      const token = route[depth]
       if (node.token === '*') return node.endpoint
-      if (node.token !== token && node.token !== ':') continue
       const next = depth + 1
       if (next === route.length) return node.endpoint
       if (node.catchAllChild != null) {
