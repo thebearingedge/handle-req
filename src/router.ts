@@ -18,6 +18,7 @@ class Endpoint<P extends Params = Params> {
   constructor(private keys: ParamKeys, private handlers: Handler<P>[]) {}
 
   async handle(req: Request, url: URL, route: string[]): Promise<Response> {
+
     const params = Object.keys(this.keys).map(Number).reduce((params, depth) => {
       const key = this.keys[depth]
       if (key === '*') {
@@ -33,7 +34,9 @@ class Endpoint<P extends Params = Params> {
       }
       return params
     }, Object.create(null))
+
     const stack = this.handlers
+
     return (async function _next(depth: number): Promise<Response> {
       const res = await stack[depth]({ req, url, params, next: () => _next(depth + 1) })
       return res ?? new Response('', { status: 501 })
@@ -56,8 +59,10 @@ type RequestHandlers<P extends Params = Params> =
   | [Handler<P>, ...Handler<P>[]]
   | [[Handler<P>, ...Handler<P>[]]]
 
-type Route<R extends Router = Router> =
-  <P extends Params = Params>(path: string, ...handlers: RequestHandlers<P>) => R
+type Route<R extends Router = Router> = <P extends Params = Params>(
+  path: string,
+  ...handlers: RequestHandlers<P>
+) => R
 
 const IS_VALID_PATH = /^\/((?::?[\w\d.-]+)(?:\/:?[\w\d_.-]+)*(?:\/\*)?\/?)?$/
 
@@ -110,7 +115,6 @@ export class Router {
     }
 
     node.endpoint = new Endpoint(keys, handlers.flat())
-
     return this
   }
 
