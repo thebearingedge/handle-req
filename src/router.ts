@@ -68,8 +68,8 @@ const IS_VALID_PATH = /^\/((?::?[\w\d.-]+)(?:\/:?[\w\d_.-]+)*(?:\/\*)?\/?)?$/
 
 export class Router {
 
-  private routes: Record<string, string> = Object.create(null)
-  private methods: Record<HTTPMethod, Node> = Object.create(null)
+  private _routes: Record<string, string> = Object.create(null)
+  private _methods: Record<HTTPMethod, Node> = Object.create(null)
 
   private _on<P extends Params = Params>(
     method: HTTPMethod,
@@ -87,11 +87,11 @@ export class Router {
     const tokens = pattern.map(slug => slug.startsWith(':') ? ':' : slug)
     const route = [method, ...tokens].join('/')
 
-    if (this.routes[route] != null) {
-      throw new Error(`${method} route conflict: ${path} - ${this.routes[route]}`)
+    if (this._routes[route] != null) {
+      throw new Error(`${method} route conflict: ${path} - ${this._routes[route]}`)
     }
 
-    this.routes[route] = path
+    this._routes[route] = path
 
     const keys = pattern.reduce((keys, slug, index) => {
       if (slug === '*') keys[index] = slug
@@ -99,7 +99,7 @@ export class Router {
       return keys
     }, Object.create(null))
 
-    let node: Node<P> = this.methods[method] ??= { token: '/' }
+    let node: Node<P> = this._methods[method] ??= { token: '/' }
 
     for (let t = 0; t < tokens.length; t++) {
       let token = tokens[t]
@@ -115,6 +115,7 @@ export class Router {
     }
 
     node.endpoint = new Endpoint(keys, handlers.flat())
+
     return this
   }
 
@@ -149,7 +150,7 @@ export class Router {
   options: Route<typeof this> = (path, ...handlers) => this._on('OPTIONS', path, ...handlers)
 
   fetch = async (req: Request): Promise<Response> => {
-    const root = this.methods[req.method as HTTPMethod]
+    const root = this._methods[req.method as HTTPMethod]
     if (root == null) return new Response('', { status: 404 })
     const url = new URL(req.url)
     const route = ['/', ...url.pathname.split('/').filter(Boolean)]
