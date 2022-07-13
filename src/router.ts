@@ -64,7 +64,7 @@ type Route<R extends Router = Router> = <P extends Params = Params>(
   ...handlers: RequestHandlers<P>
 ) => R
 
-const IS_VALID_PATH = /^\/((?::?[\w\d.-]+)(?:\/:?[\w\d_.-]+)*(?:\/\*)?\/?)?$/
+const IS_VALID_PATH = /^\/((?::?[\w\d.-~@]+)(?:\/:?[\w\d_.-~@]+)*(?:\/\*)?\/?)?$/
 
 export class Router {
 
