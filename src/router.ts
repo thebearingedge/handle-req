@@ -45,12 +45,14 @@ class Endpoint<P extends Params = Params> {
 
 }
 
-type Node<P extends Params = Params> = {
-  token: string
+class Node<P extends Params = Params> {
+
   endpoint?: Endpoint<P>
-  dynamicChild?: Node
-  catchAllChild?: Node
-  staticChildren?: Record<string, Node>
+  dynamicChild: Node | null = null
+  catchAllChild: Node | null = null
+  staticChildren: Record<string, Node> | null = null
+
+  constructor(public token: string) {}
 }
 
 type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'PATCH' | 'DELETE' | 'OPTIONS'
@@ -99,18 +101,18 @@ export class Router {
       return keys
     }, Object.create(null))
 
-    let node: Node<P> = this._methods[method] ??= { token: '/' }
+    let node: Node<P> = this._methods[method] ??= new Node('/')
 
     for (let t = 0; t < tokens.length; t++) {
       let token = tokens[t]
       if (token === ':') {
-        node = node.dynamicChild ??= { token }
+        node = node.dynamicChild ??= new Node(token)
       } else if (token === '*') {
-        node = node.catchAllChild ??= { token }
+        node = node.catchAllChild ??= new Node(token)
       } else {
         node.staticChildren ??= Object.create(null)
         // @ts-expect-error i just added staticChildren 🤷‍♀️
-        node = node.staticChildren[token] ??= { token }
+        node = node.staticChildren[token] ??= new Node(token)
       }
     }
 
