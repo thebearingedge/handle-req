@@ -76,8 +76,8 @@ export class Router extends Function {
   constructor() {
     super()
     return new Proxy(this, {
-      apply: async (_, __, [req]: [Request]) =>{
-        return this.fetch(req)
+      apply: async (_, __, [req]: [Request]) => {
+        return await this.fetch(req)
       }
     })
   }
