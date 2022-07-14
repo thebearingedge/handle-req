@@ -15,7 +15,7 @@ type Handler<P extends Params = Params> = (ctx: Context<P>) => Response | Promis
 
 class Endpoint<P extends Params = Params> {
 
-  constructor(private keys: ParamKeys, private handlers: Handler<P>[]) {}
+  constructor(private keys: ParamKeys, private handlers: Handler<P>[]) { }
 
   async handle(req: Request, url: URL, route: string[]): Promise<Response> {
 
@@ -51,10 +51,8 @@ class Node<P extends Params = Params> {
   catchAllChild: Node | null = null
   staticChildren: Record<string, Node> | null = null
 
-  constructor(public token: string) {}
+  constructor(public token: string) { }
 }
-
-type HTTPMethod = 'GET' | 'PUT' | 'POST' | 'HEAD' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
 type RequestHandlers<P extends Params = Params> =
   | [Handler<P>, ...Handler<P>[]]
@@ -69,20 +67,11 @@ const IS_VALID_PATH = /^\/((?::?[\w\d.-~@]+)(?:\/:?[\w\d_.-~@]+)*(?:\/\*)?\/?)?$
 
 export class Router extends Function {
 
-  private _routes: Record<string, string> = Object.create(null)
-  private _methods: Record<HTTPMethod, Node> = Object.create(null)
+  protected _routes: Record<string, string> = Object.create(null)
+  protected _methods: Record<string, Node> = Object.create(null)
 
-  constructor() {
-    super()
-    return new Proxy(this, {
-      apply: async (_, __, [req]: [Request]) => {
-        return await this.fetch(req)
-      }
-    })
-  }
-
-  private _on<P extends Params = Params>(
-    method: HTTPMethod,
+  on<P extends Params = Params>(
+    method: string,
     path: string,
     ...handlers: RequestHandlers<P>
   ): this {
@@ -129,7 +118,7 @@ export class Router extends Function {
     return this
   }
 
-  private _match(root: Node, route: string[]): Endpoint | null {
+  match(root: Node, route: string[]): Endpoint | null {
 
     const stack: [Node, number][] = [[root, 0]]
 
@@ -148,26 +137,22 @@ export class Router extends Function {
     return null
   }
 
-  get: Route<typeof this> = (path, ...handlers) => this._on('GET', path, ...handlers)
-  put: Route<typeof this> = (path, ...handlers) => this._on('PUT', path, ...handlers)
-  post: Route<typeof this> = (path, ...handlers) => this._on('POST', path, ...handlers)
-  head: Route<typeof this> = (path, ...handlers) => this._on('HEAD', path, ...handlers)
-  patch: Route<typeof this> = (path, ...handlers) => this._on('PATCH', path, ...handlers)
-  delete: Route<typeof this> = (path, ...handlers) => this._on('DELETE', path, ...handlers)
-  options: Route<typeof this> = (path, ...handlers) => this._on('OPTIONS', path, ...handlers)
+  get: Route<typeof this> = (path, ...handlers) => this.on('GET', path, ...handlers)
+  put: Route<typeof this> = (path, ...handlers) => this.on('PUT', path, ...handlers)
+  post: Route<typeof this> = (path, ...handlers) => this.on('POST', path, ...handlers)
+  head: Route<typeof this> = (path, ...handlers) => this.on('HEAD', path, ...handlers)
+  patch: Route<typeof this> = (path, ...handlers) => this.on('PATCH', path, ...handlers)
+  delete: Route<typeof this> = (path, ...handlers) => this.on('DELETE', path, ...handlers)
+  options: Route<typeof this> = (path, ...handlers) => this.on('OPTIONS', path, ...handlers)
 
   fetch = async (req: Request): Promise<Response> => {
-    const root = this._methods[req.method as HTTPMethod]
+    const root = this._methods[req.method]
     if (root == null) return new Response(null, { status: 404 })
     const url = new URL(req.url)
     const route = ['/', ...url.pathname.split('/').filter(Boolean)]
-    const endpoint = this._match(root, route)
+    const endpoint = this.match(root, route)
     if (endpoint == null) return new Response(null, { status: 404 })
     return await endpoint.handle(req, url, route.slice(1)) ?? new Response(null, { status: 501 })
   }
 
-}
-
-export default function hotCross(): Router {
-  return new Router()
 }

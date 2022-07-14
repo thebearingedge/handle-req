@@ -1,14 +1,14 @@
 import { Server } from 'http'
 import { expect } from 'chai'
 import request from 'supertest'
-import hotCross from './node-http'
+import hotCross from './node'
 
-describe('hotCross()', () => {
+describe('node', () => {
 
   let router: ReturnType<typeof hotCross>
   let client: ReturnType<typeof request>
 
-  beforeEach(() => {
+  beforeEach('instantiate a new router', () => {
     router = hotCross()
     client = request(new Server(router))
   })
