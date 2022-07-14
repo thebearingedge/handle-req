@@ -8,13 +8,16 @@
     "cover": "c8 -r text -r html -r lcov mocha"
   },
   "devDependencies": {
-    "@swc/core": "^1.2.211",
+    "@swc/core": "^1.2.213",
     "@types/chai": "^4.3.1",
     "@types/mocha": "^9.1.1",
+    "@types/node": "^18.0.4",
+    "@types/supertest": "^2.0.12",
     "c8": "^7.11.3",
     "chai": "^4.3.6",
     "mocha": "^10.0.0",
-    "ts-node": "^10.8.2",
+    "supertest": "^6.2.4",
+    "ts-node": "^10.9.0",
     "typescript": "^4.7.4"
   }
 }

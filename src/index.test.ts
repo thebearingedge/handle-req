@@ -1,5 +1,5 @@
 import { expect } from 'chai'
-import { Router } from './router'
+import hotCross from '.'
 
 const ok = (body?: any) => new Response(String(body))
 
@@ -7,9 +7,9 @@ const get = (url: string) => new Request(`test://${url}`)
 
 describe('Router', () => {
 
-  let router: Router
+  let router: ReturnType<typeof hotCross>
 
-  beforeEach('instantiate a new router', () => (router = new Router()))
+  beforeEach('instantiate a new router', () => (router = hotCross()))
 
   describe('method(path: pattern, ...handlers: Handler[])', () => {
 

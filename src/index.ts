@@ -68,10 +68,19 @@ type Route<R extends Router = Router> = <P extends Params = Params>(
 
 const IS_VALID_PATH = /^\/((?::?[\w\d.-~@]+)(?:\/:?[\w\d_.-~@]+)*(?:\/\*)?\/?)?$/
 
-export class Router {
+export class Router extends Function {
 
   private _routes: Record<string, string> = Object.create(null)
   private _methods: Record<HTTPMethod, Node> = Object.create(null)
+
+  constructor() {
+    super()
+    return new Proxy(this, {
+      apply: async (_, __, [req]: [Request]) =>{
+        return this.fetch(req)
+      }
+    })
+  }
 
   private _on<P extends Params = Params>(
     method: HTTPMethod,
@@ -130,12 +139,8 @@ export class Router {
       if (node.token === '*') return node.endpoint
       const next = depth + 1
       if (next === route.length) return node.endpoint
-      if (node.catchAllChild != null) {
-        stack.push([node.catchAllChild, next])
-      }
-      if (node.dynamicChild != null) {
-        stack.push([node.dynamicChild, next])
-      }
+      if (node.catchAllChild != null) stack.push([node.catchAllChild, next])
+      if (node.dynamicChild != null) stack.push([node.dynamicChild, next])
       if (node.staticChildren?.[route[next]] != null) {
         stack.push([node.staticChildren[route[next]], next])
       }
@@ -160,4 +165,8 @@ export class Router {
     return res ?? new Response('', { status: 404 })
   }
 
+}
+
+export default function hotCross(): Router {
+  return new Router()
 }
