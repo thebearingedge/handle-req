@@ -38,8 +38,7 @@ class Endpoint<P extends Params = Params> {
     const stack = this.handlers
 
     return (async function _next(depth: number): Promise<Response> {
-      const res = await stack[depth]({ req, url, params, next: () => _next(depth + 1) })
-      return res ?? new Response('', { status: 501 })
+      return await stack[depth]({ req, url, params, next: () => _next(depth + 1) })
     })(0)
   }
 
@@ -47,7 +46,7 @@ class Endpoint<P extends Params = Params> {
 
 class Node<P extends Params = Params> {
 
-  endpoint?: Endpoint<P>
+  endpoint: Endpoint<P> | null = null
   dynamicChild: Node | null = null
   catchAllChild: Node | null = null
   staticChildren: Record<string, Node> | null = null
@@ -130,7 +129,7 @@ export class Router extends Function {
     return this
   }
 
-  private _match(root: Node, route: string[]): Endpoint | undefined {
+  private _match(root: Node, route: string[]): Endpoint | null {
 
     const stack: [Node, number][] = [[root, 0]]
 
@@ -146,6 +145,7 @@ export class Router extends Function {
       }
     }
 
+    return null
   }
 
   get: Route<typeof this> = (path, ...handlers) => this._on('GET', path, ...handlers)
@@ -158,11 +158,12 @@ export class Router extends Function {
 
   fetch = async (req: Request): Promise<Response> => {
     const root = this._methods[req.method as HTTPMethod]
-    if (root == null) return new Response('', { status: 404 })
+    if (root == null) return new Response(null, { status: 404 })
     const url = new URL(req.url)
     const route = ['/', ...url.pathname.split('/').filter(Boolean)]
-    const res = await this._match(root, route)?.handle(req, url, route.slice(1))
-    return res ?? new Response('', { status: 404 })
+    const endpoint = this._match(root, route)
+    if (endpoint == null) return new Response(null, { status: 404 })
+    return await endpoint.handle(req, url, route.slice(1)) ?? new Response(null, { status: 501 })
   }
 
 }
