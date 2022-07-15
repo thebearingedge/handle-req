@@ -1,7 +1,9 @@
 import { Server } from 'http'
 import { expect } from 'chai'
 import request from 'supertest'
-import hotCross from './node'
+import hotCross from './node.js'
+import { ok } from './index.test.js'
+
 
 describe('node', () => {
 
@@ -14,14 +16,14 @@ describe('node', () => {
   })
 
   it('handles node http requests', async () => {
-    router.get('/api/foo', () => new Response())
+    router.get('/api/foo', () => ok())
     await client
       .get('/api/foo')
       .expect(200)
   })
 
   it('forwards the response body', async () => {
-    router.get('/api/foo', () => new Response('hello, node'))
+    router.get('/api/foo', () => ok('hello, node'))
     await client
       .get('/api/foo')
       .expect(200, 'hello, node')
@@ -31,7 +33,7 @@ describe('node', () => {
     router.post('/api/foo', async ({ req }) => {
       const data = await req.json()
       expect(data).to.deep.equal({ hello: 'node' })
-      return new Response('ok')
+      return ok('ok')
     })
     await client
       .post('/api/foo')

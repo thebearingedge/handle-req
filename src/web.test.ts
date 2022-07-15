@@ -1,9 +1,6 @@
 import { expect } from 'chai'
 import hotCross from './web.js'
-
-const ok = (body?: any) => new Response(String(body))
-
-const get = (url: string) => new Request(`test://${url}`)
+import { ok, get } from './index.test.js'
 
 describe('web', () => {
 
@@ -14,35 +11,35 @@ describe('web', () => {
   describe('method(path: pattern, ...handlers: Handler[])', () => {
 
     it('throws on duplicate exact routes', () => {
-      router.get('/api/foo', ok)
+      router.get('/api/foo', () => ok())
       expect(() => {
-        router.get('/api/foo', ok)
+        router.get('/api/foo', () => ok())
       }).to.throw(Error, 'GET route conflict: /api/foo - /api/foo')
     })
 
     it('throws on duplicate dynamic routes', () => {
-      router.get('/api/:foo/baz', ok)
+      router.get('/api/:foo/baz', () => ok())
       expect(() => {
-        router.get('/api/:bar/baz', ok)
+        router.get('/api/:bar/baz', () => ok())
       }).to.throw(Error, 'GET route conflict: /api/:bar/baz - /api/:foo/baz')
     })
 
     it('throws on duplicate catch-all routes', () => {
-      router.get('/api/foo/*', ok)
+      router.get('/api/foo/*', () => ok())
       expect(() => {
-        router.get('/api/foo/*', ok)
+        router.get('/api/foo/*', () => ok())
       }).to.throw(Error, 'GET route conflict: /api/foo/* - /api/foo/*')
     })
 
     it('does not throw on duplicate routes for different methods', () => {
       expect(() => {
-        router.get('/api/:foo/*', ok)
-        router.put('/api/:foo/*', ok)
-        router.post('/api/:foo/*', ok)
-        router.head('/api/:foo/*', ok)
-        router.patch('/api/:foo/*', ok)
-        router.delete('/api/:foo/*', ok)
-        router.options('/api/:foo/*', ok)
+        router.get('/api/:foo/*', () => ok())
+        router.put('/api/:foo/*', () => ok())
+        router.post('/api/:foo/*', () => ok())
+        router.head('/api/:foo/*', () => ok())
+        router.patch('/api/:foo/*', () => ok())
+        router.delete('/api/:foo/*', () => ok())
+        router.options('/api/:foo/*', () => ok())
       }).not.to.throw()
     })
 
@@ -58,7 +55,7 @@ describe('web', () => {
       })
 
       it('returns a 404 response when no route is matched', async () => {
-        router.get('/foo', ok)
+        router.get('/foo', () => ok())
         const res = await router(get('/bar'))
         expect(res).to.have.property('status', 404)
       })
@@ -82,7 +79,7 @@ describe('web', () => {
       })
 
       it('does not find routes for partial matches', async () => {
-        router.get('/foo/bar/baz', ok)
+        router.get('/foo/bar/baz', () => ok())
         const res = await router(get('/foo/bar'))
         expect(res).to.have.property('status', 404)
       })
@@ -101,7 +98,7 @@ describe('web', () => {
 
       it('hits a dynamic route with multiple parameters', async () => {
         router
-          .get('/foo/bar/baz/qux', ok)
+          .get('/foo/bar/baz/qux', () => ok())
           .get('/foo/:bar/baz/:qux', ({ params }) => {
             return ok(`${params.bar}${params.qux}`)
           })
@@ -139,7 +136,7 @@ describe('web', () => {
 
       it('only allows catch-all at the end of path', () => {
         expect(() => {
-          router.get('/foo/*/bar', ok)
+          router.get('/foo/*/bar', () => ok())
         }).to.throw(Error, 'invalid route /foo/*/bar')
       })
 
@@ -147,7 +144,7 @@ describe('web', () => {
         router
           .get('/foo/*', ({ params }) => ok(params['*']))
         const res = await router(get('/foo/bar/baz'))
-        expect(await res.text()).to.equal('bar/baz')
+        expect(await res.text()).to.equal('bar,baz')
       })
 
       it('hits a static route first', async () => {
@@ -171,7 +168,7 @@ describe('web', () => {
           .get('/foo/:bar/qux', () => ok('a'))
           .get('/foo/*', ({ params }) => ok(params['*']))
         const res = await router(get('/foo/bar/baz'))
-        expect(await res.text()).to.equal('bar/baz')
+        expect(await res.text()).to.equal('bar,baz')
       })
 
     })

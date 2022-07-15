@@ -1,6 +1,6 @@
 type NextHandler = () => Response | Promise<Response>
 
-type ParamKeys = Record<string, string>
+type ParamKeys = [string, number][]
 
 type Params = Record<string, string | string[]>
 
@@ -19,27 +19,26 @@ class Endpoint<P extends Params = Params> {
 
   async handle(req: Request, url: URL, route: string[]): Promise<Response> {
 
-    const params = Object.keys(this.keys).map(Number).reduce((params, depth) => {
-      const key = this.keys[depth]
-      if (key === '*') {
-        params[key] = route.slice(depth).join('/')
-      } else if (key in params) {
-        if (Array.isArray(params[key])) {
-          params[key].push(route[depth])
+    const params = this.keys.reduce((params, [slug, depth]) => {
+      if (slug === '*') {
+        params[slug] = route.slice(depth)
+      } else if (slug in params) {
+        if (Array.isArray(params[slug])) {
+          params[slug].push(route[depth])
         } else {
-          params[key] = [params[key], route[depth]]
+          params[slug] = [params[slug], route[depth]]
         }
       } else {
-        params[key] = route[depth]
+        params[slug] = route[depth]
       }
       return params
     }, Object.create(null))
 
     const stack = this.handlers
 
-    return (async function _next(depth: number): Promise<Response> {
+    return (async function _next(depth: number = 0): Promise<Response> {
       return await stack[depth]({ req, url, params, next: () => _next(depth + 1) })
-    })(0)
+    })()
   }
 
 }
@@ -92,11 +91,11 @@ export class Router extends Function {
 
     this._routes[route] = path
 
-    const keys = pattern.reduce((keys, slug, index) => {
-      if (slug === '*') keys[index] = slug
-      if (slug.startsWith(':')) keys[index] = slug.slice(1)
+    const keys = pattern.reduce<ParamKeys>((keys, slug, index) => {
+      if (slug === '*') keys.push([slug, index])
+      if (slug.startsWith(':')) keys.push([slug.slice(1), index])
       return keys
-    }, Object.create(null))
+    }, [])
 
     let node: Node<P> = this._methods[method] ??= new Node('/')
 
