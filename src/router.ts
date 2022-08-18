@@ -50,7 +50,7 @@ class Node<P extends Params = Params> {
   catchAllChild: Node | null = null
   staticChildren: Record<string, Node> | null = null
 
-  constructor(public token: string) { }
+  constructor(public token: string) {}
 }
 
 type RequestHandlers<P extends Params = Params> =
@@ -99,8 +99,7 @@ export class Router extends Function {
 
     let node: Node<P> = this._methods[method] ??= new Node('/')
 
-    for (let t = 0; t < tokens.length; t++) {
-      let token = tokens[t]
+    tokens.forEach(token => {
       if (token === ':') {
         node = node.dynamicChild ??= new Node(token)
       } else if (token === '*') {
@@ -110,7 +109,7 @@ export class Router extends Function {
         // @ts-expect-error i just added staticChildren 🤷‍♀️
         node = node.staticChildren[token] ??= new Node(token)
       }
-    }
+    })
 
     node.endpoint = new Endpoint(keys, handlers.flat())
 
