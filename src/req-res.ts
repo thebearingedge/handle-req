@@ -9,7 +9,6 @@ type JSONValue =
 
 export class HotRequest extends Request {
 
-
 }
 
 export class HotResponse extends Response {

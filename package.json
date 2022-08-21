@@ -8,10 +8,10 @@
     "cover": "c8 -r text -r html -r lcov mocha"
   },
   "devDependencies": {
-    "@swc/core": "^1.2.239",
+    "@swc/core": "^1.2.241",
     "@types/chai": "^4.3.3",
     "@types/mocha": "^9.1.1",
-    "@types/node": "^18.7.6",
+    "@types/node": "^18.7.8",
     "@types/supertest": "^2.0.12",
     "c8": "^7.12.0",
     "chai": "^4.3.6",
